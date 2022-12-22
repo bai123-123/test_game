@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 )
 
@@ -13,6 +14,13 @@ type Game struct {
 	Winner    uint       `gorm:"column:winner" json:"winner"`
 	Episode   int        `gorm:"column:episode; default: 0" json:"episode"`
 	Status    string     `gorm:"column:driving_code;type:enum('Processing', 'END', 'STOP','INITIAL');default: 'INITIAL'" json:"status"`
+}
+
+type Replay struct {
+	GameID   uint   `json:"game_id"`
+	Player1  uint   `json:"player_1"`
+	Player2  uint   `json:"player_2"`
+	Episodes []Move `json:"episodes"`
 }
 
 func PlayGame(player1 uint, player2 uint) (Game, error) {
@@ -43,5 +51,27 @@ func PlayGame(player1 uint, player2 uint) (Game, error) {
 	}
 
 	return game, nil
+
+}
+
+func ReplayGame(gameID uint) (*Replay, error) {
+	var game Game
+	db.First(&game, gameID)
+	if game.ID == 0 {
+		return nil, errors.New("game does not exist")
+	}
+
+	var moves []Move
+	err = db.Where("game_id = ?", gameID).Order("episode").Find(&moves).Error
+	if err != nil {
+		return nil, err
+	}
+	replay := Replay{
+		GameID:   gameID,
+		Player1:  game.Player1,
+		Player2:  game.Player2,
+		Episodes: moves,
+	}
+	return &replay, nil
 
 }
