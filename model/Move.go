@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"math/rand"
 	"time"
@@ -27,6 +28,14 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 		return Move{}, false, errors.New("invalid game")
 	}
 	if game.Status != "END" {
+		//load map
+		var mapp Map
+		db.First(&mapp, game.MapID)
+		var rule Rule
+		err := json.Unmarshal([]byte(mapp.Rules), &rule)
+		if err != nil {
+			return Move{}, false, errors.New("load rule fail")
+		}
 		var curMove Move
 		db.Where("game_id = ? and episode = ? and player_id = ?", gameID, game.Episode, playerID).First(&curMove)
 		if curMove.ID == 0 {
@@ -42,14 +51,14 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 			} else if nextMove.ID == 0 {
 				//create new move
 				currentPos := curMove.EndPos
-				nextPos := moveInMove(currentPos, step)
+				nextPos := moveInMove(currentPos, step, rule)
 				//record new move
 				newEpisode := game.Episode + 1
 				nextMove, err = rercordMove(playerID, gameID, currentPos, nextPos, newEpisode, step)
 				if err != nil {
 					return nextMove, false, err
 				}
-				if nextPos == 20 {
+				if nextPos == 100 {
 					game.Episode += 1
 					now := time.Now()
 					game.EndTime = &now
@@ -64,7 +73,7 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 			if nextMove.ID > 0 {
 				//create new move
 				currentPos := curMove.EndPos
-				nextPos := moveInMove(currentPos, step)
+				nextPos := moveInMove(currentPos, step, rule)
 				//record new move
 				newEpisode := game.Episode + 1
 
@@ -72,7 +81,7 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 				if err != nil {
 					return nextMove, false, err
 				}
-				if nextPos == 20 {
+				if nextPos == 100 {
 					now := time.Now()
 					game.Episode = newEpisode
 					game.EndTime = &now
@@ -96,11 +105,16 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 
 }
 
-func moveInMove(currPos int, step int) int {
+func moveInMove(currPos int, step int, rule Rule) int {
 	nextStep := currPos + step
-	if nextStep > 20 {
-		return 40 - nextStep
+	if nextStep > 100 {
+		return 200 - nextStep
 	} else {
+		if rule.Ladder[nextStep] > 0 {
+			nextStep = rule.Ladder[nextStep]
+		} else if rule.Snake[nextStep] > 0 {
+			nextStep = rule.Snake[nextStep]
+		}
 		return nextStep
 	}
 }

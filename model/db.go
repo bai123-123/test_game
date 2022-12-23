@@ -40,7 +40,7 @@ func InitDb() {
 		os.Exit(1)
 	}
 
-	err = db.AutoMigrate(&Player{}, &Move{}, &Game{})
+	err = db.AutoMigrate(&Player{}, &Move{}, &Game{}, &Map{})
 	fmt.Println(err)
 	//db.Migrator().CreateTable(&User{})
 

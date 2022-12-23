@@ -11,16 +11,18 @@ type Game struct {
 	EndTime   *time.Time `gorm:"column:end_time" json:"end_time"`
 	Player1   uint       `gorm:"column:player_1;NOT NULL" json:"player_1"`
 	Player2   uint       `gorm:"column:player_2;NOT NULL" json:"player_2"`
+	MapID     uint       `gorm:"column:map_id;NOT NULL" json:"map_id"`
 	Winner    uint       `gorm:"column:winner" json:"winner"`
 	Episode   int        `gorm:"column:episode; default: 0" json:"episode"`
 	Status    string     `gorm:"column:driving_code;type:enum('Processing', 'END', 'STOP','INITIAL');default: 'INITIAL'" json:"status"`
 }
 
 type Replay struct {
-	GameID   uint   `json:"game_id"`
-	Player1  uint   `json:"player_1"`
-	Player2  uint   `json:"player_2"`
-	Episodes []Move `json:"episodes"`
+	GameID    uint   `json:"game_id"`
+	ReplayMap string `json:"replay_map"`
+	Player1   uint   `json:"player_1"`
+	Player2   uint   `json:"player_2"`
+	Episodes  []Move `json:"episodes"`
 }
 
 func PlayGame(player1 uint, player2 uint) (Game, error) {
@@ -28,6 +30,14 @@ func PlayGame(player1 uint, player2 uint) (Game, error) {
 	game.Player1 = player1
 	game.Player2 = player2
 	game.StartTime = time.Now()
+
+	//select map randomly
+	var mapID uint
+	err = db.Raw("SELECT id FROM map ORDER BY RAND() LIMIT 1").Scan(&mapID).Error
+	if err != nil {
+		return game, err
+	}
+	game.MapID = mapID
 
 	err := db.Create(&game).Error
 	if err != nil {
@@ -66,11 +76,19 @@ func ReplayGame(gameID uint) (*Replay, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var replayMap Map
+	db.First(&replayMap, game.MapID)
+	if game.ID == 0 {
+		return nil, errors.New("map does not exist")
+	}
+
 	replay := Replay{
-		GameID:   gameID,
-		Player1:  game.Player1,
-		Player2:  game.Player2,
-		Episodes: moves,
+		GameID:    gameID,
+		ReplayMap: replayMap.Rules,
+		Player1:   game.Player1,
+		Player2:   game.Player2,
+		Episodes:  moves,
 	}
 	return &replay, nil
 

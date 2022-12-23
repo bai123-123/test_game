@@ -17,6 +17,7 @@ func InitRouter() {
 		router.POST("newGame", v1.CreateNewGame)
 		router.POST("move", v1.MakeAMove)
 		router.GET("replay", v1.GetReplay)
+		router.POST("makeMap", v1.MakeMap)
 	}
 
 	r.Run(utils.HttpPort)
