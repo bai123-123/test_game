@@ -59,7 +59,8 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 					return nextMove, false, err
 				}
 				if nextPos == 100 {
-					game.Episode += 1
+					game.Episode = newEpisode
+					game.Winner = playerID
 					now := time.Now()
 					game.EndTime = &now
 					game.Status = "END"
@@ -85,6 +86,7 @@ func PlayerMove(playerID uint, gameID uint) (Move, bool, error) {
 					now := time.Now()
 					game.Episode = newEpisode
 					game.EndTime = &now
+					game.Winner = playerID
 					game.Status = "END"
 					db.Save(&game)
 					return nextMove, true, nil
